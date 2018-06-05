@@ -1,0 +1,9 @@
+<resources>
+    <string name="app_name">Book Store</string>
+    <string name="action_insert_dummy_stock">Insert Dummy Stock</string>
+
+    <!-- Button Labels -->
+    <string name="all_products">See All Products</string>
+    <string name="products_more_than_fifteen">Products > $15</string>
+    <string name="feldheim_books">All Feldheim Books</string>
+</resources>

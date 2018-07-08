@@ -16,6 +16,22 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <activity
+            android:name=".ProductDetailsActivity"
+            android:parentActivityName=".StockListActivity"
+            android:theme="@style/ProductDetailsTheme">
+            <!-- Parent activity meta-data to support 4.0 and lower -->
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value=".StockListActivity"/>
+        </activity>
+        <provider
+            android:authorities="com.example.android.bookstore"
+            android:name=".Data.BookStoreProvider"
+            android:exported="false"/>
+        <meta-data
+            android:name="preloaded_fonts"
+            android:resource="@array/preloaded_fonts" />
     </application>
 
 </manifest>

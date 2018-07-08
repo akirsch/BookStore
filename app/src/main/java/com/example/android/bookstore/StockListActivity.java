@@ -1,67 +1,85 @@
 package com.example.android.bookstore;
 
-import android.content.ContentValues;
+import android.app.LoaderManager;
+import android.content.ContentUris;
+import android.content.CursorLoader;
+import android.content.Intent;
+import android.content.Loader;
 import android.database.Cursor;
-import android.database.sqlite.SQLiteDatabase;
+import android.net.Uri;
+import android.support.design.widget.FloatingActionButton;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
-import android.widget.Button;
-import android.widget.TextView;
-
+import android.widget.AdapterView;
+import android.widget.ListView;
 import com.example.android.bookstore.Data.BookStoreContract.StockEntry;
-import com.example.android.bookstore.Data.BookStoreDbHelper;
 
-import java.util.ArrayList;
 
-public class StockListActivity extends AppCompatActivity {
+public class StockListActivity extends AppCompatActivity implements LoaderManager.LoaderCallbacks<Cursor>{
 
-    Button allProductsButton;
-    Button productsOverFifteenDollarsButton;
-    Button feldheimBooksButton;
-    private BookStoreDbHelper mDbhelper;
-    private TextView productView;
+    private ProductCursorAdapter productCursorAdapter;
+
+    private CursorLoader cursorLoader;
+
+    FloatingActionButton fab;
+
+    private final int PRODUCT_CURSOR_LOADER_ID = 0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_stock_list);
 
-        mDbhelper = new BookStoreDbHelper(this);
+        getSupportActionBar().setTitle(getString(R.string.stock_list_activity_title));
 
-        productView = findViewById(R.id.text_view_products);
-
-        allProductsButton = findViewById(R.id.button_all_products);
-        // when button pressed show all products in the database
-        allProductsButton.setOnClickListener(new View.OnClickListener() {
+        // Setup FAB to open ProductDetailsActivity
+        fab = findViewById(R.id.fab);
+        fab.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                // empty the text view if displaying any data
-                productView.setText("");
-                showAllData();
+                Intent intent = new Intent(StockListActivity.this, ProductDetailsActivity.class);
+                intent.setData(null);
+                startActivity(intent);
             }
         });
 
-        productsOverFifteenDollarsButton = findViewById(R.id.button_products_more_than_15);
-        productsOverFifteenDollarsButton.setOnClickListener(new View.OnClickListener() {
+        // set up list view functionality
+        ListView productListView = findViewById(R.id.productListView);
+
+        // Set up an adapter to create a list item for each row of pet data in the Cursor
+        // There is no product data yet (until the loader finishes) so pass in null for the Cursor
+        productCursorAdapter = new ProductCursorAdapter(this, null);
+        productListView.setAdapter(productCursorAdapter);
+
+        // Find and set empty view on the ListView, so that it only shows when the list has 0 items.
+        View emptyView = findViewById(R.id.empty_view);
+        productListView.setEmptyView(emptyView);
+
+
+        // set up a click listener to open the product details activity
+        // displaying the data for each product when it is clicked on
+        productListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
-            public void onClick(View view) {
-                productView.setText("");
-                showProductsOverFifteen();
+            public void onItemClick(AdapterView<?> adapterView, View view, int position, long id) {
+
+                // create intent to launch ProductDetailsActivity when a product in the list is clicked on.
+                Intent intent = new Intent(StockListActivity.this, ProductDetailsActivity.class);
+
+                // create specific uri for product that is clicked on
+                Uri currentPetUri = ContentUris.withAppendedId(StockEntry.CONTENT_URI, id);
+
+                // set this uri as the data field for the intent
+                intent.setData(currentPetUri);
+                startActivity(intent);
             }
         });
 
-        feldheimBooksButton = findViewById(R.id.button_feldheim_books);
-        feldheimBooksButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                productView.setText("");
-                showFeldheimBooks();
-            }
-        });
+        // create instance of Loader Manager object
+        getLoaderManager().initLoader(PRODUCT_CURSOR_LOADER_ID, null, this );
     }
 
     @Override
@@ -76,258 +94,53 @@ public class StockListActivity extends AppCompatActivity {
     public boolean onOptionsItemSelected(MenuItem item) {
         // User clicked on a menu option in the app bar overflow menu
         switch (item.getItemId()) {
-            // Respond to a click on the "Insert dummy data" menu option
-            case R.id.action_insert_dummy_stock:
-                insertDummyData();
+            // Respond to a click on the "Delete all entries" menu option
+            case R.id.action_delete_all_entries:
+                deleteAllProducts();
                 return true;
         }
         return super.onOptionsItemSelected(item);
     }
 
+    @Override
+    public Loader<Cursor> onCreateLoader(int i, Bundle bundle) {
+        /*
+         * Takes action based on the ID of the Loader that's being created
+         */
+        switch (PRODUCT_CURSOR_LOADER_ID) {
+            case PRODUCT_CURSOR_LOADER_ID:
+                // create string array to select the desired columns from the database
+                String[] projection = {
+                        StockEntry._ID,
+                        StockEntry.COLUMN_PRODUCT_NAME,
+                        StockEntry.COLUMN_PRODUCT_PRICE,
+                        StockEntry.COLUMN_PRODUCT_QUANTITY};
+
+                cursorLoader = new CursorLoader(getApplicationContext(),StockEntry.CONTENT_URI, projection,
+                        null, null, null );
+
+                return cursorLoader;
+            default:
+                // An invalid id was passed in
+                return null;
+        }
+    }
+
+    @Override
+    public void onLoadFinished(Loader<Cursor> loader, Cursor cursor) {
+        productCursorAdapter.swapCursor(cursor);
+    }
+
+    @Override
+    public void onLoaderReset(Loader<Cursor> loader) {
+        productCursorAdapter.swapCursor(null);
+    }
 
     /**
-     * method to display all current data in database
+     * Helper method to delete all products in the database.
      */
-    private void showAllData() {
-
-        // Create and/or open a database to read from it
-        SQLiteDatabase db = mDbhelper.getReadableDatabase();
-
-        // create string array to select the desired columns from the database
-        String[] projection = {
-                StockEntry._ID,
-                StockEntry.COLUMN_PRODUCT_NAME,
-                StockEntry.COLUMN_PRODUCT_PRICE,
-                StockEntry.COLUMN_PRODUCT_QUANTITY,
-                StockEntry.COLUMN_SUPPLIER_NAME,
-                StockEntry.COLUMN_SUPPLIER_PHONE};
-
-        Cursor cursor = db.query(
-                StockEntry.TABLE_NAME,
-                projection,
-                null,
-                null,
-                null,
-                null,
-                null);
-
-        productView = findViewById(R.id.text_view_products);
-
-        try {
-
-
-            // create header in text view to show column headers
-            productView.append(
-                    StockEntry._ID + " - " +
-                            StockEntry.COLUMN_SUPPLIER_NAME + " - " +
-                            StockEntry.COLUMN_PRODUCT_PRICE + " - " +
-                            StockEntry.COLUMN_PRODUCT_QUANTITY + " - " +
-                            StockEntry.COLUMN_SUPPLIER_NAME + " - " +
-                            StockEntry.COLUMN_SUPPLIER_PHONE + "\n");
-
-            // Figure out the index of each column
-            int idColumnIndex = cursor.getColumnIndex(StockEntry._ID);
-            int nameColumnIndex = cursor.getColumnIndex(StockEntry.COLUMN_PRODUCT_NAME);
-            int priceColumnIndex = cursor.getColumnIndex(StockEntry.COLUMN_PRODUCT_PRICE);
-            int quantityColumnIndex = cursor.getColumnIndex(StockEntry.COLUMN_PRODUCT_QUANTITY);
-            int supplierNameColumnIndex = cursor.getColumnIndex(StockEntry.COLUMN_SUPPLIER_NAME);
-            int supplierPhoneNumberColumnIndex = cursor.getColumnIndex(StockEntry.COLUMN_SUPPLIER_PHONE);
-
-            // Iterate through all the returned rows in the cursor
-            while (cursor.moveToNext()) {
-                int currentID = cursor.getInt(idColumnIndex);
-                String currentName = cursor.getString(nameColumnIndex);
-                double currentPrice = cursor.getDouble(priceColumnIndex);
-
-                // price is stored as number of cents in database, so
-                // convert price into dollars and cents format to display to user
-                double displayPrice = currentPrice / 100;
-
-                int currentQuantity = cursor.getInt(quantityColumnIndex);
-                String currentSupplierName = cursor.getString(supplierNameColumnIndex);
-                String currentSupplierPhoneNumber = cursor.getString(supplierPhoneNumberColumnIndex);
-
-                // Display the values from each column of the current row in the cursor in the TextView
-                productView.append(("\n" + currentID + " - " +
-                        currentName + " - " +
-                        "$" + displayPrice + " - " +
-                        currentQuantity + " - " +
-                        currentSupplierName + " - " +
-                        currentSupplierPhoneNumber));
-            }
-
-
-        } finally {
-            // Always close the cursor when you're done reading from it. This releases all its
-            // resources and makes it invalid.
-            cursor.close();
-        }
-    }
-
-    private void showProductsOverFifteen() {
-        // Create and/or open a database to read from it
-        SQLiteDatabase db = mDbhelper.getReadableDatabase();
-
-        // create string array to select the desired columns from the database
-        String[] projection = {
-                StockEntry._ID,
-                StockEntry.COLUMN_PRODUCT_NAME,
-                StockEntry.COLUMN_PRODUCT_PRICE};
-
-        String selection = StockEntry.COLUMN_PRODUCT_PRICE + ">?";
-        String[] selectionArgs = new String[]{"1500"};
-
-        Cursor cursor = db.query(
-                StockEntry.TABLE_NAME,
-                projection,
-                selection,
-                selectionArgs,
-                null,
-                null,
-                null);
-
-        productView = findViewById(R.id.text_view_products);
-
-        try {
-            // create header in text view to show column headers
-            productView.append(
-                    StockEntry._ID + " - " +
-                            StockEntry.COLUMN_PRODUCT_NAME + " - " +
-                            StockEntry.COLUMN_PRODUCT_PRICE + "\n");
-
-            // Figure out the index of each column
-            int idColumnIndex = cursor.getColumnIndex(StockEntry._ID);
-            int nameColumnIndex = cursor.getColumnIndex(StockEntry.COLUMN_PRODUCT_NAME);
-            int priceColumnIndex = cursor.getColumnIndex(StockEntry.COLUMN_PRODUCT_PRICE);
-
-            // Iterate through all the returned rows in the cursor
-            while (cursor.moveToNext()) {
-                int currentID = cursor.getInt(idColumnIndex);
-                String currentName = cursor.getString(nameColumnIndex);
-                double currentPrice = cursor.getDouble(priceColumnIndex);
-
-                // price is stored as number of cents in database, so
-                // convert price into dollars and cents format to display to user
-                double displayPrice = currentPrice / 100;
-
-                // Display the values from each column of the current row in the cursor in the TextView
-                productView.append(("\n" + currentID + " - " +
-                        currentName + " - " +
-                        "$" + displayPrice));
-            }
-        } finally {
-            cursor.close();
-        }
-    }
-
-    private void showFeldheimBooks() {
-
-        // Create and/or open a database to read from it
-        SQLiteDatabase db = mDbhelper.getReadableDatabase();
-
-        // create string array to select the desired columns from the database
-        String[] projection = {
-                StockEntry._ID,
-                StockEntry.COLUMN_PRODUCT_NAME,
-                StockEntry.COLUMN_PRODUCT_PRICE,
-                StockEntry.COLUMN_SUPPLIER_NAME};
-
-        String selection = StockEntry.COLUMN_SUPPLIER_NAME + "=?";
-        String[] selectionArgs = new String[]{"Feldheim"};
-
-        Cursor cursor = db.query(
-                StockEntry.TABLE_NAME,
-                projection,
-                selection,
-                selectionArgs,
-                null,
-                null,
-                null);
-
-        productView = findViewById(R.id.text_view_products);
-
-        try {
-            // create header in text view to show column headers
-            productView.append(
-                    StockEntry._ID + " - " +
-                            StockEntry.COLUMN_PRODUCT_NAME + " - " +
-                            StockEntry.COLUMN_PRODUCT_PRICE + " - " +
-                            StockEntry.COLUMN_SUPPLIER_NAME + "\n");
-
-            // Figure out the index of each column
-            int idColumnIndex = cursor.getColumnIndex(StockEntry._ID);
-            int nameColumnIndex = cursor.getColumnIndex(StockEntry.COLUMN_PRODUCT_NAME);
-            int priceColumnIndex = cursor.getColumnIndex(StockEntry.COLUMN_PRODUCT_PRICE);
-            int supplierNameColumnIndex = cursor.getColumnIndex(StockEntry.COLUMN_SUPPLIER_NAME);
-
-            // Iterate through all the returned rows in the cursor
-            while (cursor.moveToNext()) {
-                int currentID = cursor.getInt(idColumnIndex);
-                String currentName = cursor.getString(nameColumnIndex);
-                double currentPrice = cursor.getDouble(priceColumnIndex);
-
-                // price is stored as number of cents in database, so
-                // convert price into dollars and cents format to display to user
-                double displayPrice = currentPrice / 100;
-
-                String currentSupplierName = cursor.getString(supplierNameColumnIndex);
-
-                // Display the values from each column of the current row in the cursor in the TextView
-                productView.append(("\n" + currentID + " - " +
-                        currentName + " - " +
-                        "$" + displayPrice + " - " +
-                        currentSupplierName));
-            }
-
-
-        } finally {
-            // Always close the cursor when you're done reading from it. This releases all its
-            // resources and makes it invalid.
-            cursor.close();
-        }
-    }
-
-    private void insertDummyData() {
-
-        // create Array of dummy data to insert into database
-        ArrayList<Product> dummyStockList = new ArrayList<>();
-        dummyStockList.add(new Product("Lord of the Rings", 1599, 500, "Penguin Books",
-                "02073245567"));
-        dummyStockList.add(new Product("Harry Potter", 899, 1500, "Red Hat Publishers",
-                "01616678976"));
-        dummyStockList.add(new Product("Kosher Cuisine", 1699, 300, "Feldheim",
-                "02086632178"));
-        dummyStockList.add(new Product("Home of Miracles", 2099, 210, "Mosaica Press",
-                "0097226547896"));
-        dummyStockList.add(new Product("Tales for the Soul", 1799, 500, "Artscroll",
-                "01171367893"));
-        dummyStockList.add(new Product("Short Vort", 699, 50, "Adir Press",
-                "0548786543"));
-        dummyStockList.add(new Product("Planting and Building", 1299, 430, "Feldheim",
-                "026435665"));
-
-        mDbhelper = new BookStoreDbHelper(this);
-
-        SQLiteDatabase db = mDbhelper.getWritableDatabase();
-
-        for (int i = 0; i < dummyStockList.size(); i++) {
-
-            // Create a new map of values, where column names are the keys
-            ContentValues values = new ContentValues();
-            values.put(StockEntry.COLUMN_PRODUCT_NAME, dummyStockList.get(i).getmName());
-            values.put(StockEntry.COLUMN_PRODUCT_PRICE, dummyStockList.get(i).getmPrice());
-            values.put(StockEntry.COLUMN_PRODUCT_QUANTITY, dummyStockList.get(i).getmQuantity());
-            values.put(StockEntry.COLUMN_SUPPLIER_NAME, dummyStockList.get(i).getmSupplierName());
-            values.put(StockEntry.COLUMN_SUPPLIER_PHONE, dummyStockList.get(i).getmSupplierPhoneNumber());
-
-
-            // Insert the new row, returning the primary key value of the new row
-            long newRowId = db.insert(StockEntry.TABLE_NAME, null, values);
-
-            Log.v(StockListActivity.class.getSimpleName(), "Id of new row is " + String.valueOf(newRowId));
-
-        }
-
-
+    public void deleteAllProducts(){
+        int rowsDeleted = getContentResolver().delete(StockEntry.CONTENT_URI, null, null);
+        Log.v("StockListActivity", rowsDeleted + " rows deleted from Stock database");
     }
 }

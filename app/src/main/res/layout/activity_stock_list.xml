@@ -1,53 +1,58 @@
 <?xml version="1.0" encoding="utf-8"?>
-<RelativeLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     tools:context=".StockListActivity">
 
-    <LinearLayout
-        android:id="@+id/buttons"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:layout_margin="@dimen/activity_margin">
-
-        <Button
-            android:id="@+id/button_all_products"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/all_products"
-            android:layout_marginBottom="@dimen/button_margin"/>
-
-        <Button
-            android:id="@+id/button_products_more_than_15"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/products_more_than_fifteen"
-            android:layout_marginBottom="@dimen/button_margin"
-            android:layout_marginTop="@dimen/button_margin"/>
-
-        <Button
-            android:id="@+id/button_feldheim_books"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/feldheim_books"
-            android:layout_marginTop="@dimen/button_margin"/>
-    </LinearLayout>
-
-    <TextView
-        android:id="@+id/text_view_products"
-        android:layout_below="@id/buttons"
+    <ListView
+        android:id="@+id/productListView"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:padding="@dimen/activity_margin"/>
+        android:layout_margin="@dimen/activity_margin"
+        android:divider="@null"
+        android:dividerHeight="0dp">
+    </ListView>
+
+    <RelativeLayout
+        android:id="@+id/empty_view"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+        <ImageView
+            android:id="@+id/bookshelf_image"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_centerHorizontal="true"
+            android:layout_marginTop="@dimen/bookcase_margin"
+            android:src="@drawable/empty_bookshelf" />
+
+        <TextView
+            android:id="@+id/empty_list_title"
+            style="@style/BasicTextViewTheme"
+            android:layout_below="@id/bookshelf_image"
+            android:layout_centerHorizontal="true"
+            android:layout_marginBottom="@dimen/dp_8"
+            android:layout_marginTop="@dimen/activity_margin"
+            android:text="@string/empty_list_title" />
+
+        <TextView
+            android:id="@+id/empty_list_hint"
+            style="@style/BasicTextViewTheme"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_below="@id/empty_list_title"
+            android:layout_centerHorizontal="true"
+            android:text="@string/empty_list_hint" />
+    </RelativeLayout>
 
     <android.support.design.widget.FloatingActionButton
         android:id="@+id/fab"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_alignParentBottom="true"
-        android:layout_alignParentRight="true"
-        android:layout_margin="@dimen/fab_margin" />
+        android:layout_margin="@dimen/fab_margin"
+        android:src="@drawable/ic_action_add"
+        android:layout_alignParentEnd="true"
+        android:layout_alignParentBottom="true"/>
+
 </RelativeLayout>

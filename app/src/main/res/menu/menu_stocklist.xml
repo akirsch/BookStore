@@ -6,7 +6,7 @@
     tools:context=".CatalogActivity">
 
     <item
-        android:id="@+id/action_insert_dummy_stock"
-        android:title="@string/action_insert_dummy_stock"
+        android:id="@+id/action_delete_all_entries"
+        android:title="@string/action_delete_all_entries"
         app:showAsAction="never" />
 </menu>
